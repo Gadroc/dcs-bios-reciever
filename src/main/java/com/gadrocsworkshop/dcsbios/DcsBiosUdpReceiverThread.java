@@ -20,36 +20,19 @@ class DcsBiosUdpReceiverThread extends Thread {
     private MulticastSocket socket;
     private boolean running = true;
     private InetAddress dcsAddress = null;
-    private DcsBiosParser parser = new DcsBiosParser();
+    private DcsBiosParser parser;
 
     /**
-     * Creates a new receiver thread with the default DCSBIOS group and port addresses.
-     * @throws IOException Thrown if there are problems creating DatagramSocket
-     */
-    public DcsBiosUdpReceiverThread() throws IOException {
-        this("239.255.50.10", 5010);
-    }
-
-    /**
-     * Creates a new receiver which listens only for packets sent to this computer
-     * on the designated port.
+     * Creates a new receiver thread.
      *
-     * @param port Port to listen on for DCSBIOS packets.
-     * @throws IOException Thrown if there are problems creating DatagramSocket
-     */
-    public DcsBiosUdpReceiverThread(int port) throws IOException {
-        this(null, port);
-    }
-
-    /**
-     * Creates a new receiver.
-     *
+     * @param parser Parser to use with this UDP reciever.
      * @param groupAddress Multicast group address we should listen on.
      *                     If null or empty will only listen for packets sent directly to this computer.
      * @param port Port to listen on for DCSBIOS packets.
      * @throws IOException Thrown if there are problems creating DatagramSocket
      */
-    public DcsBiosUdpReceiverThread(String groupAddress, int port) throws IOException {
+    public DcsBiosUdpReceiverThread(DcsBiosParser parser, String groupAddress, int port) throws IOException {
+        this.parser = parser;
         socket = new MulticastSocket(port);
         InetAddress group = InetAddress.getByName(groupAddress);
         LOGGER.finest("DatagramSocket created and bound to address.");
@@ -79,8 +62,10 @@ class DcsBiosUdpReceiverThread extends Thread {
         while(running) {
             try {
                 socket.receive(packet);
-                dcsAddress = packet.getAddress();
-                parser.processData(buf, packet.getOffset(), packet.getLength());
+                if (running) {
+                    dcsAddress = packet.getAddress();
+                    parser.processData(buf, packet.getOffset(), packet.getLength());
+                }
             }
             catch (SocketTimeoutException e) {
                 // Ignore timeout and receive again.  Timeout
@@ -93,5 +78,15 @@ class DcsBiosUdpReceiverThread extends Thread {
         }
 
         socket.close();
+    }
+
+    /**
+     * Sets the internal flag determining if the run loop should continue.  Should be set to true
+     * before calling start on this thread.
+     *
+     * @param running True if the UDP thread should continue, false if it should exit.
+     */
+    public void setRunning(boolean running) {
+        this.running = running;
     }
 }
