@@ -20,8 +20,8 @@ public class DcsBiosParser {
     private int value = 0;
     private ParserState state = ParserState.WAIT_FOR_SYNC;
 
-    private LinkedHashSet<IDcsBiosDataListener> dataListeners = new LinkedHashSet<IDcsBiosDataListener>();
-    private LinkedHashSet<IDcsBiosSyncListener> syncListeners = new LinkedHashSet<IDcsBiosSyncListener>();
+    private LinkedHashSet<DcsBiosDataListener> dataListeners = new LinkedHashSet<DcsBiosDataListener>();
+    private LinkedHashSet<DcsBiosSyncListener> syncListeners = new LinkedHashSet<DcsBiosSyncListener>();
 
     /**
      * Registers a data listener to this DCSBIOS parser.  Data listeners are
@@ -29,7 +29,7 @@ public class DcsBiosParser {
      *
      * @param listener Listener which will get notified
      */
-    public synchronized void addDataListener(IDcsBiosDataListener listener) {
+    public synchronized void addDataListener(DcsBiosDataListener listener) {
         if (listener == null) {
             throw new NullPointerException("Can't add null listener.");
         }
@@ -41,7 +41,7 @@ public class DcsBiosParser {
      *
      * @param listener Listener which will no longer be notified of new data.
      */
-    public synchronized void removeDataListener(IDcsBiosDataListener listener) {
+    public synchronized void removeDataListener(DcsBiosDataListener listener) {
         dataListeners.remove(listener);
     }
 
@@ -53,7 +53,7 @@ public class DcsBiosParser {
      *
      * @param listener
      */
-    public synchronized void addSyncListener(IDcsBiosSyncListener listener) {
+    public synchronized void addSyncListener(DcsBiosSyncListener listener) {
         if (listener == null) {
             throw new NullPointerException("Can't add null listener.");
         }
@@ -65,7 +65,7 @@ public class DcsBiosParser {
      *
      * @param listener Listener which will no longer be notified of sync events.
      */
-    public synchronized void removeSyncListener(IDcsBiosSyncListener listener) {
+    public synchronized void removeSyncListener(DcsBiosSyncListener listener) {
         syncListeners.remove(listener);
     }
 
@@ -165,11 +165,11 @@ public class DcsBiosParser {
      * Helper method which notifies all data listeners.
      */
     private void notifyDataListeners() {
-        Set<IDcsBiosDataListener> s;
+        Set<DcsBiosDataListener> s;
         synchronized (this) {
-            s = new LinkedHashSet<IDcsBiosDataListener>(dataListeners);
+            s = new LinkedHashSet<DcsBiosDataListener>(dataListeners);
         }
-        for(IDcsBiosDataListener listener : s) {
+        for(DcsBiosDataListener listener : s) {
             listener.dcsBioDataWrite(address, value);
         }
     }
@@ -178,11 +178,11 @@ public class DcsBiosParser {
      * Helper method which notifies all sync listeners.
      */
     private void notifySynceListeners() {
-        Set<IDcsBiosSyncListener> s;
+        Set<DcsBiosSyncListener> s;
         synchronized (this) {
-            s = new LinkedHashSet<IDcsBiosSyncListener>(syncListeners);
+            s = new LinkedHashSet<DcsBiosSyncListener>(syncListeners);
         }
-        for(IDcsBiosSyncListener listener : s) {
+        for(DcsBiosSyncListener listener : s) {
             listener.handleDcsBiosFrameSync();
         }
     }

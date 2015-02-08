@@ -8,7 +8,7 @@ package com.gadrocsworkshop.dcsbios;
  *
  * Created by Craig Courtney on 1/30/2015.
  */
-public interface IDcsBiosSyncListener {
+public interface DcsBiosSyncListener {
     /**
      * Called at the end of a frame data.  All IDcsBiosDataListeners can
      * be assumed to be consistent during the length of this call and can

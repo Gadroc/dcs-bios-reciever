@@ -20,7 +20,7 @@ public class DcsBiosParserTest extends TestCase {
         }
     }
 
-    private class CheckDataListener implements IDcsBiosDataListener, IDcsBiosSyncListener {
+    private class CheckDataListener implements DcsBiosDataListener, DcsBiosSyncListener {
 
         private CheckData[] expected;
         private int index = 0;

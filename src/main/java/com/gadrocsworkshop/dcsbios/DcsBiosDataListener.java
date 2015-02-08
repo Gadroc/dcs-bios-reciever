@@ -8,7 +8,7 @@ package com.gadrocsworkshop.dcsbios;
  *
  * Created by Craig Courtney on 1/30/2015.
  */
-public interface IDcsBiosDataListener {
+public interface DcsBiosDataListener {
 
     /**
      * Called when new data is available from the DCSBIOS data stream.
