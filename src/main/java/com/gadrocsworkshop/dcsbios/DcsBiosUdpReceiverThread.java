@@ -1,10 +1,7 @@
 package com.gadrocsworkshop.dcsbios;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.MulticastSocket;
-import java.net.InetAddress;
-import java.net.SocketTimeoutException;
+import java.net.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,7 +14,7 @@ class DcsBiosUdpReceiverThread extends Thread {
 
     private final static Logger LOGGER = Logger.getLogger(DcsBiosUdpReceiverThread.class.getName());
 
-    private MulticastSocket socket;
+    private DatagramSocket socket;
     private boolean running = true;
     private InetAddress dcsAddress = null;
     private DcsBiosParser parser;
@@ -33,14 +30,19 @@ class DcsBiosUdpReceiverThread extends Thread {
      */
     public DcsBiosUdpReceiverThread(DcsBiosParser parser, String groupAddress, int port) throws IOException {
         this.parser = parser;
-        socket = new MulticastSocket(port);
-        InetAddress group = InetAddress.getByName(groupAddress);
-        LOGGER.finest("DatagramSocket created and bound to address.");
-        if (groupAddress != null && groupAddress.trim().isEmpty()) {
-            socket.joinGroup(group);
-            socket.setSoTimeout(1000);
-            LOGGER.finest("DatagramSocket joined to group address.");
+
+        if (groupAddress == null || groupAddress.trim().isEmpty()) {
+            socket = new DatagramSocket(port);
+            LOGGER.fine("DatagramSocket created and bound to address.");
         }
+        else {
+            InetAddress group = InetAddress.getByName(groupAddress);
+            socket = new MulticastSocket(port);
+            ((MulticastSocket)socket).joinGroup(group);
+            LOGGER.fine("MulticastSocket created and joined to group address.");
+        }
+
+        socket.setSoTimeout(1000);
     }
 
     /**
@@ -59,6 +61,7 @@ class DcsBiosUdpReceiverThread extends Thread {
         byte[] buf = new byte[256];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
 
+        LOGGER.fine("Entering packet reading loop.");
         while(running) {
             try {
                 socket.receive(packet);
@@ -70,6 +73,7 @@ class DcsBiosUdpReceiverThread extends Thread {
             catch (SocketTimeoutException e) {
                 // Ignore timeout and receive again.  Timeout
                 // is there to facilitate canceling the running thread.
+                // LOGGER.finest("Timeout waiting for packet.");
             }
             catch (IOException e) {
                 LOGGER.log(Level.SEVERE, "Error receiving packet from DCS Bios. Shutting down listener.", e);
@@ -77,6 +81,7 @@ class DcsBiosUdpReceiverThread extends Thread {
             }
         }
 
+        LOGGER.fine("Exiting packet reading loop.");
         socket.close();
     }
 

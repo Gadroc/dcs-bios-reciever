@@ -1,13 +1,17 @@
 apply plugin: 'java'
 apply plugin: 'jacoco'
-apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
 sourceCompatibility = 1.8
-version = '1.0.1'
+version = '1.0.4'
 group = 'com.gadrocsworkshop'
 
 repositories {
     mavenCentral()
+}
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allSource
 }
 
 dependencies {
@@ -18,8 +22,13 @@ task wrapper(type: Wrapper) {
     gradleVersion = '2.2.1'
 }
 
-uploadArchives {
-    repositories.mavenDeployer {
-        repository(url: "file:///Users/Craig Courtney/maven-repository")
+publishing {
+    publications {
+        source(MavenPublication) {
+            from components.java
+            artifact sourceJar {
+                classifier "sources"
+            }
+        }
     }
 }
