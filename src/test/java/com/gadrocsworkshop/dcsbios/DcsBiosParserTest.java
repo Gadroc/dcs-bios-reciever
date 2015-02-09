@@ -36,7 +36,7 @@ public class DcsBiosParserTest extends TestCase {
         }
 
         @Override
-        public void dcsBioDataWrite(int address, int data) {
+        public void dcsBiosDataWrite(int address, int data) {
             if (index < expected.length) {
                 CheckData expectedValue = expected[index++];
                 if (expectedValue.sync ||

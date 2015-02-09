@@ -170,7 +170,7 @@ public class DcsBiosParser {
             s = new LinkedHashSet<DcsBiosDataListener>(dataListeners);
         }
         for(DcsBiosDataListener listener : s) {
-            listener.dcsBioDataWrite(address, value);
+            listener.dcsBiosDataWrite(address, value);
         }
     }
 

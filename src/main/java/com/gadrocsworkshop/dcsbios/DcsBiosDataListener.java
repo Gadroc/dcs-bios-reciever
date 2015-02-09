@@ -16,5 +16,5 @@ public interface DcsBiosDataListener {
      * @param address Address into the aircraft data namespace for this data.
      * @param data Data element which has been updated.
      */
-    public void dcsBioDataWrite(int address, int data);
+    public void dcsBiosDataWrite(int address, int data);
 }
