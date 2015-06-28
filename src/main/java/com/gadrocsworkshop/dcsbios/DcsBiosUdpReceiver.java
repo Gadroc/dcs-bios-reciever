@@ -1,6 +1,8 @@
 package com.gadrocsworkshop.dcsbios;
 
 import java.io.IOException;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.util.logging.Logger;
 
 /**
@@ -79,5 +81,24 @@ public class DcsBiosUdpReceiver {
      */
     public DcsBiosParser getParser() {
         return parser;
+    }
+
+    /**
+     * Address of the DCSBIOS server we are receiving packets from.
+     *
+     * @return InetAddress object containing address of the DCSBIOS server. Null if we have not received any packets yet.
+     */
+    public InetAddress getDcsAddress() {
+        return thread.getDcsAddress();
+    }
+
+    /**
+     * Sends a command back to the DCSBIOS
+     *
+     * @param command Command to send to DCSBIOS
+     * @throws IOException Thrown if an error ocurrs sending the datagram.
+     */
+    public void sendCommand(String command) throws IOException {
+        thread.sendCommand(command);
     }
 }

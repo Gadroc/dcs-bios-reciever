@@ -14,6 +14,7 @@ class DcsBiosUdpReceiverThread extends Thread {
 
     private final static Logger LOGGER = Logger.getLogger(DcsBiosUdpReceiverThread.class.getName());
 
+    private int dcsPort = 7778;
     private DatagramSocket socket;
     private boolean running = true;
     private InetAddress dcsAddress = null;
@@ -55,6 +56,24 @@ class DcsBiosUdpReceiverThread extends Thread {
     }
 
     /**
+     * Port which commands are sent to DCSBIOS on.
+     *
+     * @return Port number used to send DCSBIOS commands to.
+     */
+    public int getDcsPort() {
+        return dcsPort;
+    }
+
+    /**
+     * Sets port number which commadns will be sent to DCSBIOS on.
+     *
+     * @param dcsPort Port number used to send DCSBIOS commands to.
+     */
+    public void setDcsPort(int dcsPort) {
+        this.dcsPort = dcsPort;
+    }
+
+    /**
      * Run loop for receiving packets.
      */
     public void run() {
@@ -93,5 +112,19 @@ class DcsBiosUdpReceiverThread extends Thread {
      */
     public void setRunning(boolean running) {
         this.running = running;
+    }
+
+    /**
+     * Sends a command back to the DCSBIOS
+     *
+     * @param command Command to send to DCSBIOS
+     * @throws IOException Thrown if an error ocurrs sending the datagram.
+     */
+    public void sendCommand(String command) throws IOException {
+        if (dcsAddress != null) {
+            byte[] sendData = command.getBytes();
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, dcsAddress, dcsPort);
+            socket.send(sendPacket);
+        }
     }
 }
