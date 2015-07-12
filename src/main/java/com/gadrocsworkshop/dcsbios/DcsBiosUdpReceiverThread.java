@@ -121,10 +121,12 @@ class DcsBiosUdpReceiverThread extends Thread {
      * @throws IOException Thrown if an error ocurrs sending the datagram.
      */
     public void sendCommand(String command) throws IOException {
-        if (dcsAddress != null) {
+        if (running && dcsAddress != null && socket != null && command != null) {
             byte[] sendData = command.getBytes();
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, dcsAddress, dcsPort);
-            socket.send(sendPacket);
+            if (sendData != null) {
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, dcsAddress, dcsPort);
+                socket.send(sendPacket);
+            }
         }
     }
 }
