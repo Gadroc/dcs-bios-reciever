@@ -1,4 +1,4 @@
-package com.gadrocsworkshop.dcsbios;
+package com.gadrocsworkshop.dcsbios.receiver;
 
 import java.io.IOException;
 import java.net.*;
@@ -121,12 +121,19 @@ class DcsBiosUdpReceiverThread extends Thread {
      * @throws IOException Thrown if an error ocurrs sending the datagram.
      */
     public void sendCommand(String command) throws IOException {
+        sendCommand(command.getBytes());
+    }
+
+    /**
+     * Sends a command back to the DCSBIOS
+     *
+     * @param command Command to send to DCSBIOS
+     * @throws IOException Thrown if an error ocurrs sending the datagram.
+     */
+    public void sendCommand(byte[] command) throws IOException {
         if (running && dcsAddress != null && socket != null && command != null) {
-            byte[] sendData = command.getBytes();
-            if (sendData != null) {
-                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, dcsAddress, dcsPort);
-                socket.send(sendPacket);
-            }
+            DatagramPacket sendPacket = new DatagramPacket(command, command.length, dcsAddress, dcsPort);
+            socket.send(sendPacket);
         }
     }
 }

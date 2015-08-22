@@ -1,7 +1,9 @@
-package com.gadrocsworkshop.dcsbios;
+package com.gadrocsworkshop.dcsbios.receiver;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Parser for the DCSBIOS network protocol.
@@ -9,6 +11,8 @@ import java.util.Set;
  * Created by Craig Courtney on 1/30/2015.
  */
 public class DcsBiosParser {
+
+    private static final Logger LOGGER = Logger.getLogger(DcsBiosParser.class.getName());
 
     private enum ParserState {
         WAIT_FOR_SYNC, ADDRESS_LOW, ADDRESS_HIGH, COUNT_LOW, COUNT_HIGH, DATA_LOW, DATA_HIGH
@@ -20,8 +24,8 @@ public class DcsBiosParser {
     private int value = 0;
     private ParserState state = ParserState.WAIT_FOR_SYNC;
 
-    private LinkedHashSet<DcsBiosDataListener> dataListeners = new LinkedHashSet<DcsBiosDataListener>();
-    private LinkedHashSet<DcsBiosSyncListener> syncListeners = new LinkedHashSet<DcsBiosSyncListener>();
+    private LinkedHashSet<DcsBiosDataListener> dataListeners = new LinkedHashSet<>();
+    private LinkedHashSet<DcsBiosSyncListener> syncListeners = new LinkedHashSet<>();
 
     /**
      * Registers a data listener to this DCSBIOS parser.  Data listeners are
@@ -46,12 +50,12 @@ public class DcsBiosParser {
     }
 
     /**
-     * Registers a sync listener to this DCSBIOS stream.  Sync listeners are
+     * Registers a sync listener to this DCSBIOS parser.  Sync listeners are
      * notified at the end of a frame of data.  Data is only in a consistent state
      * during a sync call.  Any data read outside of a sync call may be invalid
      * data.
      *
-     * @param listener
+     * @param listener Listener to get sync events.
      */
     public synchronized void addSyncListener(DcsBiosSyncListener listener) {
         if (listener == null) {
@@ -131,7 +135,7 @@ public class DcsBiosParser {
                 if (remaining == 0) {
                     state = ParserState.ADDRESS_LOW;
                     if (address == 0xfffe) {
-                        notifySynceListeners();
+                        notifySyncListeners();
                     }
                     else {
                         notifyDataListeners();
@@ -167,23 +171,31 @@ public class DcsBiosParser {
     private void notifyDataListeners() {
         Set<DcsBiosDataListener> s;
         synchronized (this) {
-            s = new LinkedHashSet<DcsBiosDataListener>(dataListeners);
+            s = new LinkedHashSet<>(dataListeners);
         }
         for(DcsBiosDataListener listener : s) {
-            listener.dcsBiosDataWrite(address, value);
+            try {
+                listener.dcsBiosDataWrite(address, value);
+            } catch (Exception ex) {
+                LOGGER.log(Level.WARNING, String.format("Exception thrown from DCS-Bios data handler %s.", listener.getClass().getName()), ex);
+            }
         }
     }
 
     /**
      * Helper method which notifies all sync listeners.
      */
-    private void notifySynceListeners() {
+    private void notifySyncListeners() {
         Set<DcsBiosSyncListener> s;
         synchronized (this) {
-            s = new LinkedHashSet<DcsBiosSyncListener>(syncListeners);
+            s = new LinkedHashSet<>(syncListeners);
         }
         for(DcsBiosSyncListener listener : s) {
-            listener.handleDcsBiosFrameSync();
+            try {
+                listener.handleDcsBiosFrameSync();
+            } catch (Exception ex) {
+                LOGGER.log(Level.WARNING, String.format("Exception thrown from DCS-Bios sync handler %s.", listener.getClass().getName()), ex);
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.gadrocsworkshop.dcsbios;
+package com.gadrocsworkshop.dcsbios.receiver;
 
 /**
  * Interface for objects which listen to data updates from DCSBIOS protocol.
@@ -16,5 +16,5 @@ public interface DcsBiosDataListener {
      * @param address Address into the aircraft data namespace for this data.
      * @param data Data element which has been updated.
      */
-    public void dcsBiosDataWrite(int address, int data);
+    void dcsBiosDataWrite(int address, int data);
 }

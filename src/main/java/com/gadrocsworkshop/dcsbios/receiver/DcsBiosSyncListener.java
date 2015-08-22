@@ -1,4 +1,4 @@
-package com.gadrocsworkshop.dcsbios;
+package com.gadrocsworkshop.dcsbios.receiver;
 
 /**
  * Interface for objects which need to process / display data from the DCSBIOS data
@@ -14,5 +14,5 @@ public interface DcsBiosSyncListener {
      * be assumed to be consistent during the length of this call and can
      * be referenced.
      */
-    public void handleDcsBiosFrameSync();
+    void handleDcsBiosFrameSync();
 }

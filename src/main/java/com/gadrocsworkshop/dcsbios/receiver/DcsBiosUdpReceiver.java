@@ -1,7 +1,6 @@
-package com.gadrocsworkshop.dcsbios;
+package com.gadrocsworkshop.dcsbios.receiver;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.logging.Logger;
 
@@ -10,7 +9,7 @@ import java.util.logging.Logger;
  *
  * Created by Craig Courtney on 1/30/2015.
  */
-public class DcsBiosUdpReceiver {
+public class DcsBiosUdpReceiver implements DcsBiosReceiver {
 
     private final static Logger LOGGER = Logger.getLogger(DcsBiosUdpReceiverThread.class.getName());
 
@@ -47,43 +46,6 @@ public class DcsBiosUdpReceiver {
     }
 
     /**
-     * Checks to see if the UDP reciever is running and processing data.
-     *
-     * @return True if the receiver is running, false otherwise.
-     */
-    public boolean isRunning() {
-        return thread != null && thread.isAlive();
-    }
-
-    /**
-     * Starts the receiver listening for UDP packets.
-     */
-    public void start() {
-        if (!isRunning()) {
-            thread.setRunning(true);
-            thread.start();
-        }
-    }
-
-    /**
-     * Stops the receiver from listening for UDP packets and processing them.
-     */
-    public void stop() {
-        if (isRunning()) {
-            thread.setRunning(false);
-        }
-    }
-
-    /**
-     * Parser instance for this listener.
-     *
-     * @return Parser.
-     */
-    public DcsBiosParser getParser() {
-        return parser;
-    }
-
-    /**
      * Address of the DCSBIOS server we are receiving packets from.
      *
      * @return InetAddress object containing address of the DCSBIOS server. Null if we have not received any packets yet.
@@ -93,12 +55,56 @@ public class DcsBiosUdpReceiver {
     }
 
     /**
-     * Sends a command back to the DCSBIOS
+     * Checks to see if the UDP reciever is running and processing data.
      *
-     * @param command Command to send to DCSBIOS
-     * @throws IOException Thrown if an error ocurrs sending the datagram.
+     * @return True if the receiver is running, false otherwise.
      */
+    public boolean isRunning() {
+        return thread != null && thread.isAlive();
+    }
+
+    @Override
+    public void start() {
+        if (!isRunning()) {
+            thread.setRunning(true);
+            thread.start();
+        }
+    }
+
+    @Override
+    public void stop() {
+        if (isRunning()) {
+            thread.setRunning(false);
+        }
+    }
+
+    @Override
     public void sendCommand(String command) throws IOException {
         thread.sendCommand(command);
+    }
+
+    @Override
+    public void sendCommand(byte[] command) throws IOException {
+        thread.sendCommand(command);
+    }
+
+    @Override
+    public void addDataListener(DcsBiosDataListener listener) {
+        parser.addDataListener(listener);
+    }
+
+    @Override
+    public void removeDataListener(DcsBiosDataListener listener) {
+        parser.removeDataListener(listener);
+    }
+
+    @Override
+    public void addSyncListener(DcsBiosSyncListener listener) {
+        parser.addSyncListener(listener);
+    }
+
+    @Override
+    public void removeSyncListener(DcsBiosSyncListener listener) {
+        parser.removeSyncListener(listener);
     }
 }

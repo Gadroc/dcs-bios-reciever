@@ -1,5 +1,8 @@
 package com.gadrocsworkshop.dcsbios;
 
+import com.gadrocsworkshop.dcsbios.receiver.DcsBiosDataListener;
+import com.gadrocsworkshop.dcsbios.receiver.DcsBiosParser;
+import com.gadrocsworkshop.dcsbios.receiver.DcsBiosSyncListener;
 import junit.framework.TestCase;
 
 public class DcsBiosParserTest extends TestCase {
@@ -101,6 +104,40 @@ public class DcsBiosParserTest extends TestCase {
         assertTrue("Expected output from listener not found.", listener.isValid());
         parser.removeDataListener(listener);
         parser.removeSyncListener(listener);
+    }
+
+    public void testTwoParsers() throws Exception {
+        CheckData[] expected = {
+                new CheckData(0x0000,0x0010),
+                new CheckData(0x0004,0x1021),
+                new CheckData(0x0006,0x3142),
+                new CheckData(0x0002,0xff05),
+                new CheckData(0x01ff,0x2475),
+                new CheckData()
+        };
+
+        byte[] inputData = {
+                0x55, 0x55, 0x55, 0x55,                         // Frame Start
+                0x00, 0x00, 0x02, 0x00, 0x10, 0x00,             // One Integer (0x0010) at address 0x0000
+                0x04, 0x00, 0x04, 0x00, 0x21, 0x10, 0x42, 0x31, // Two Integers (0x1021, 0x3142) at address 0x0004
+                0x02, 0x00, 0x02, 0x00, 0x05, (byte)0xff,       // One Integer (0xff05) at address 0x0002
+                (byte)0xff, 0x01, 0x02, 0x00, 0x75, 0x24,       // One Integer (0x2475) ad address 0x01ff
+                (byte)0xfe, (byte)0xff, 0x02, 0x00, 0x00, 0x00  // End of frame
+        };
+
+        CheckDataListener listener = new CheckDataListener(expected);
+        CheckDataListener listener2 = new CheckDataListener(expected);
+        parser.addDataListener(listener);
+        parser.addSyncListener(listener);
+        parser.addDataListener(listener2);
+        parser.addSyncListener(listener2);
+        parser.processData(inputData, 0, inputData.length);
+        assertTrue("Expected output from listener not found.", listener.isValid());
+        assertTrue("Expected output from listener2 not found.", listener2.isValid());
+        parser.removeDataListener(listener);
+        parser.removeSyncListener(listener);
+        parser.removeDataListener(listener2);
+        parser.removeSyncListener(listener2);
     }
 
     public void testMissingEndFrame() throws Exception {
