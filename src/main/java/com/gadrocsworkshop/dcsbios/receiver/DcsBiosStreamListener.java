@@ -1,7 +1,5 @@
 package com.gadrocsworkshop.dcsbios.receiver;
 
-import java.nio.ByteBuffer;
-
 /**
  * Interface for objects which listen to the raw stream from the DCS-BIOS protocol.
  * All DcsBiosPacketListener calls will be from the same thread, but

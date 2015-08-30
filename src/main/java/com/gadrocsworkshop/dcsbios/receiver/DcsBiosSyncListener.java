@@ -1,7 +1,7 @@
 package com.gadrocsworkshop.dcsbios.receiver;
 
 /**
- * Interface for objects which need to process / display data from the DCSBIOS data
+ * Interface for objects which need to process / display data from the DCS-BIOS data
  * stream.  Objects which read from the DcsBiosSyncListener streams can only be
  * validly read inside calls to dcsBiosFrameSyncReceived.  If read outside this method
  * they may be in an inconsistent or partially updated state.

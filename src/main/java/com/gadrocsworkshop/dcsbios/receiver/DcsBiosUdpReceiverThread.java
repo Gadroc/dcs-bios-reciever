@@ -8,7 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * UDP Listener thread for DCSBIOS packets.
+ * UDP Listener thread for DCS-BIOS packets.
  *
  * Created by Craig Courtney on 1/30/2015.
  */
@@ -20,17 +20,17 @@ class DcsBiosUdpReceiverThread extends Thread {
     private DatagramSocket socket;
     private boolean running = true;
     private InetAddress dcsAddress = null;
-    private DcsBiosParser parser;
+    private final DcsBiosParser parser;
 
-    private LinkedHashSet<DcsBiosStreamListener> streamListeners = new LinkedHashSet<>();
+    private final LinkedHashSet<DcsBiosStreamListener> streamListeners = new LinkedHashSet<>();
 
     /**
      * Creates a new receiver thread.
      *
-     * @param parser Parser to use with this UDP reciever.
+     * @param parser Parser to use with this UDP receiver.
      * @param groupAddress Multicast group address we should listen on.
      *                     If null or empty will only listen for packets sent directly to this computer.
-     * @param port Port to listen on for DCSBIOS packets.
+     * @param port Port to listen on for DCS-BIOS packets.
      * @throws IOException Thrown if there are problems creating DatagramSocket
      */
     public DcsBiosUdpReceiverThread(DcsBiosParser parser, String groupAddress, int port) throws IOException {
@@ -73,27 +73,27 @@ class DcsBiosUdpReceiverThread extends Thread {
     }
 
     /**
-     * Address of the DCSBIOS server we are receiving packets from.
+     * Address of the DCS-BIOS server we are receiving packets from.
      *
-     * @return InetAddress object containing address of the DCSBIOS server. Null if we have not received any packets yet.
+     * @return InetAddress object containing address of the DCS-BIOS server. Null if we have not received any packets yet.
      */
     public InetAddress getDcsAddress() {
         return dcsAddress;
     }
 
     /**
-     * Port which commands are sent to DCSBIOS on.
+     * Port which commands are sent to DCS-BIOS on.
      *
-     * @return Port number used to send DCSBIOS commands to.
+     * @return Port number used to send DCS-BIOS commands to.
      */
     public int getDcsPort() {
         return dcsPort;
     }
 
     /**
-     * Sets port number which commadns will be sent to DCSBIOS on.
+     * Sets port number which commands will be sent to DCS-BIOS on.
      *
-     * @param dcsPort Port number used to send DCSBIOS commands to.
+     * @param dcsPort Port number used to send DCS-BIOS commands to.
      */
     public void setDcsPort(int dcsPort) {
         this.dcsPort = dcsPort;
@@ -142,20 +142,20 @@ class DcsBiosUdpReceiverThread extends Thread {
     }
 
     /**
-     * Sends a command back to the DCSBIOS
+     * Sends a command back to the DCS-BIOS
      *
-     * @param command Command to send to DCSBIOS
-     * @throws IOException Thrown if an error ocurrs sending the datagram.
+     * @param command Command to send to DCS-BIOS
+     * @throws IOException Thrown if an error occurs sending the datagram.
      */
     public void sendCommand(String command) throws IOException {
         sendCommand(command.getBytes());
     }
 
     /**
-     * Sends a command back to the DCSBIOS
+     * Sends a command back to the DCS-BIOS
      *
-     * @param command Command to send to DCSBIOS
-     * @throws IOException Thrown if an error ocurrs sending the datagram.
+     * @param command Command to send to DCS-BIOS
+     * @throws IOException Thrown if an error occurs sending the datagram.
      */
     public void sendCommand(byte[] command) throws IOException {
         if (running && dcsAddress != null && socket != null && command != null) {

@@ -1,14 +1,12 @@
 package com.gadrocsworkshop.dcsbios.receiver;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Parser for the DCSBIOS network protocol.
+ * Parser for the DCS-BIOS network protocol.
  *
  * Created by Craig Courtney on 1/30/2015.
  */
@@ -27,8 +25,8 @@ public class DcsBiosParser {
 
     private ParserState state = ParserState.WAIT_FOR_SYNC;
 
-    private LinkedHashSet<DcsBiosDataListener> dataListeners = new LinkedHashSet<>();
-    private LinkedHashSet<DcsBiosSyncListener> syncListeners = new LinkedHashSet<>();
+    private final LinkedHashSet<DcsBiosDataListener> dataListeners = new LinkedHashSet<>();
+    private final LinkedHashSet<DcsBiosSyncListener> syncListeners = new LinkedHashSet<>();
 
     /**
      * Registers a data listener to this DCS-BIOS parser.  Data listeners are
@@ -77,9 +75,9 @@ public class DcsBiosParser {
     }
 
     /**
-     * Process a buffer containing DCSBIOS stream data.
+     * Process a buffer containing DCS-BIOS stream data.
      *
-     * @param buffer Buffer containing the DCSBIOS stream.
+     * @param buffer Buffer containing the DCS-BIOS stream.
      * @param offset Offset into the buffer to start processing.
      * @param length Number of bytes to process.
      */
@@ -94,6 +92,7 @@ public class DcsBiosParser {
      *
      * @param data Byte to process.
      */
+    @SuppressWarnings("WeakerAccess")
     public void processData(byte data) {
         switch (state) {
             case WAIT_FOR_SYNC:
@@ -178,7 +177,7 @@ public class DcsBiosParser {
         }
         for(DcsBiosDataListener listener : s) {
             try {
-                listener.dcsBiosDataWriten(address, value);
+                listener.dcsBiosDataWritten(address, value);
             } catch (Exception ex) {
                 LOGGER.log(Level.WARNING, String.format("Exception thrown from DCS-BIOS data handler %s.", listener.getClass().getName()), ex);
             }

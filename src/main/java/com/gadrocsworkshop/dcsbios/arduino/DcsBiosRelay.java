@@ -24,7 +24,7 @@ public class DcsBiosRelay implements SerialPortEventListener {
     private SerialPort serialPort;
     private int dcsPort = 7778;
     private DatagramSocket socket;
-    private byte[] sendBuffer = new byte[2048];
+    private final byte[] sendBuffer = new byte[2048];
     private int sendBufferPointer = 0;
     private InetAddress dcsAddress = null;
 
@@ -67,9 +67,9 @@ public class DcsBiosRelay implements SerialPortEventListener {
             try {
                 int count = serialPortEvent.getEventValue();
                 byte[] data = serialPort.readBytes(count);
-                for (int i = 0; i < data.length; i++) {
-                    sendBuffer[sendBufferPointer++] = data[i];
-                    if (data[i] == 10) {
+                for (byte aData : data) {
+                    sendBuffer[sendBufferPointer++] = aData;
+                    if (aData == 10) {
                         if (dcsAddress != null) {
                             DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBufferPointer, dcsAddress, dcsPort);
                             socket.send(sendPacket);

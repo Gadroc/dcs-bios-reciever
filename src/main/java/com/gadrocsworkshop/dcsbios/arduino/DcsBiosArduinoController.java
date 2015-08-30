@@ -45,7 +45,7 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
 
     private int messageSize;
     private int messagePointer;
-    private byte[] messageBuffer = new byte[64];
+    private final byte[] messageBuffer = new byte[64];
 
     public DcsBiosArduinoController(DcsBiosReceiver receiver, String serialPortName) {
         this.buffer = new ByteRingBuffer(4096);
@@ -60,6 +60,7 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
         return serialPortName;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public synchronized void setSerialPortName(String serialPortName) {
         this.serialPortName = serialPortName;
         try {
@@ -72,10 +73,6 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
         } catch (SerialPortException ex) {
             LOGGER.log(Level.WARNING, "Error changing serial port.", ex);
         }
-    }
-
-    private synchronized SerialPort getSerialPort() {
-        return serialPort;
     }
 
     private void initSerialPort() throws SerialPortException {
@@ -91,7 +88,7 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
 
     private synchronized void requestControllerStatus() {
         try {
-            if (statusRequestPending == false) {
+            if (!statusRequestPending) {
                 serialPort.writeByte(COMMAND_REQUEST_STATUS);
                 LOGGER.finer("Requesting controller status.");
                 statusRequestPending = true;
@@ -112,18 +109,17 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
 
     private void sendBusExportStreamData() {
         try {
-            SerialPort port = getSerialPort();
             if (isControllerReadyForData() && buffer.size() > 0) {
                 int size = buffer.size() > 64 ? 64 : buffer.size();
-                port.writeByte(COMMAND_LOAD_EXPORT_DATA);
-                port.writeByte((byte) size);
+                serialPort.writeByte(COMMAND_LOAD_EXPORT_DATA);
+                serialPort.writeByte((byte) size);
                 int checksum = size;
                 for(int i=0;i<size;i++) {
                     byte d = buffer.get();
                     checksum += d;
-                    port.writeByte(d);
+                    serialPort.writeByte(d);
                 }
-                port.writeByte((byte)checksum);
+                serialPort.writeByte((byte)checksum);
                 setControllerReadyForData(false);
                 LOGGER.finest(String.format("Sent %d bytes with %d remaining.", size, buffer.size()));
             }

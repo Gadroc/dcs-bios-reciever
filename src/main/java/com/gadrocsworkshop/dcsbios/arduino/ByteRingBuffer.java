@@ -2,7 +2,7 @@ package com.gadrocsworkshop.dcsbios.arduino;
 
 import java.nio.BufferOverflowException;
 
-public class ByteRingBuffer {
+class ByteRingBuffer {
 
     private final byte[] elements;
 
@@ -16,6 +16,7 @@ public class ByteRingBuffer {
         elements = new byte[size];
     }
 
+    @SuppressWarnings("WeakerAccess")
     public void add(byte item) {
 
         if (available == elements.length) {
@@ -40,6 +41,7 @@ public class ByteRingBuffer {
         return result;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public int capacity() {
         return elements.length;
     }
