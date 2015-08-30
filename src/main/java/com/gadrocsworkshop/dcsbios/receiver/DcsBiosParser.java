@@ -1,5 +1,7 @@
 package com.gadrocsworkshop.dcsbios.receiver;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.logging.Level;
@@ -22,14 +24,15 @@ public class DcsBiosParser {
     private int address = 0;
     private int remaining = 0;
     private int value = 0;
+
     private ParserState state = ParserState.WAIT_FOR_SYNC;
 
     private LinkedHashSet<DcsBiosDataListener> dataListeners = new LinkedHashSet<>();
     private LinkedHashSet<DcsBiosSyncListener> syncListeners = new LinkedHashSet<>();
 
     /**
-     * Registers a data listener to this DCSBIOS parser.  Data listeners are
-     * notified anytime new data is read from the DCSBIOS stream.
+     * Registers a data listener to this DCS-BIOS parser.  Data listeners are
+     * notified anytime new data is read from the DCS-BIOS stream.
      *
      * @param listener Listener which will get notified
      */
@@ -41,7 +44,7 @@ public class DcsBiosParser {
     }
 
     /**
-     * Removes a data listener from this DCSBIOS parser.
+     * Removes a data listener from this DCS-BIOS parser.
      *
      * @param listener Listener which will no longer be notified of new data.
      */
@@ -50,7 +53,7 @@ public class DcsBiosParser {
     }
 
     /**
-     * Registers a sync listener to this DCSBIOS parser.  Sync listeners are
+     * Registers a sync listener to this DCS-BIOS parser.  Sync listeners are
      * notified at the end of a frame of data.  Data is only in a consistent state
      * during a sync call.  Any data read outside of a sync call may be invalid
      * data.
@@ -65,7 +68,7 @@ public class DcsBiosParser {
     }
 
     /**
-     * Removes a sync listener from this DCSBIO parser.
+     * Removes a sync listener from this DCS-BIOS parser.
      *
      * @param listener Listener which will no longer be notified of sync events.
      */
@@ -175,9 +178,9 @@ public class DcsBiosParser {
         }
         for(DcsBiosDataListener listener : s) {
             try {
-                listener.dcsBiosDataWrite(address, value);
+                listener.dcsBiosDataWriten(address, value);
             } catch (Exception ex) {
-                LOGGER.log(Level.WARNING, String.format("Exception thrown from DCS-Bios data handler %s.", listener.getClass().getName()), ex);
+                LOGGER.log(Level.WARNING, String.format("Exception thrown from DCS-BIOS data handler %s.", listener.getClass().getName()), ex);
             }
         }
     }
@@ -192,9 +195,9 @@ public class DcsBiosParser {
         }
         for(DcsBiosSyncListener listener : s) {
             try {
-                listener.handleDcsBiosFrameSync();
+                listener.dcsBiosFrameSyncReceived();
             } catch (Exception ex) {
-                LOGGER.log(Level.WARNING, String.format("Exception thrown from DCS-Bios sync handler %s.", listener.getClass().getName()), ex);
+                LOGGER.log(Level.WARNING, String.format("Exception thrown from DCS-BIOS sync handler %s.", listener.getClass().getName()), ex);
             }
         }
     }

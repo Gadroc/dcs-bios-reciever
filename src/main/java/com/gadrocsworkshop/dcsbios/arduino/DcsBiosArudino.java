@@ -1,16 +1,18 @@
-package com.gadrocsworkshop.dcsbios.arduino.a10c;
+package com.gadrocsworkshop.dcsbios.arduino;
 
 import com.gadrocsworkshop.dcsbios.receiver.DcsBiosReceiver;
 import com.gadrocsworkshop.dcsbios.receiver.DcsBiosUdpReceiver;
 
-public class A10C {
-
+/**
+ * Created by Craig Courtney on 8/25/2015.
+ */
+public class DcsBiosArudino {
     public static void main(String[] args) {
         try {
             DcsBiosReceiver receiver = new DcsBiosUdpReceiver();
             receiver.start();
 
-            CenterConsoleBus centerBus = new CenterConsoleBus(receiver, "COM7");
+            DcsBiosArduinoController centerBus = new DcsBiosArduinoController(receiver, "COM7");
 
             while(true) {
                 Thread.sleep(1000);

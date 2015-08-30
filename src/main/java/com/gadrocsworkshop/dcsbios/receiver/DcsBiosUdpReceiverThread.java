@@ -2,6 +2,8 @@ package com.gadrocsworkshop.dcsbios.receiver;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,6 +21,8 @@ class DcsBiosUdpReceiverThread extends Thread {
     private boolean running = true;
     private InetAddress dcsAddress = null;
     private DcsBiosParser parser;
+
+    private LinkedHashSet<DcsBiosStreamListener> streamListeners = new LinkedHashSet<>();
 
     /**
      * Creates a new receiver thread.
@@ -44,6 +48,28 @@ class DcsBiosUdpReceiverThread extends Thread {
         }
 
         socket.setSoTimeout(1000);
+    }
+
+    /**
+     * Registers a stream listener to this DCS-BIOS parser.  Stream listeners are
+     * notified incoming raw stream data.
+     *
+     * @param listener Listener to get stream events.
+     */
+    public synchronized void addStreamListener(DcsBiosStreamListener listener) {
+        if (listener == null) {
+            throw new NullPointerException("Can't add null listener.");
+        }
+        streamListeners.add(listener);
+    }
+
+    /**
+     * Removes a stream listener from this DCS-BIOS parser.
+     *
+     * @param listener Listener which will no longer be notified of stream events.
+     */
+    public synchronized void removeStreamListener(DcsBiosStreamListener listener) {
+        streamListeners.remove(listener);
     }
 
     /**
@@ -77,7 +103,7 @@ class DcsBiosUdpReceiverThread extends Thread {
      * Run loop for receiving packets.
      */
     public void run() {
-        byte[] buf = new byte[256];
+        byte[] buf = new byte[2048];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
 
         LOGGER.fine("Entering packet reading loop.");
@@ -87,6 +113,7 @@ class DcsBiosUdpReceiverThread extends Thread {
                 if (running) {
                     dcsAddress = packet.getAddress();
                     parser.processData(buf, packet.getOffset(), packet.getLength());
+                    notifyStreamListeners(buf, packet.getOffset(), packet.getLength());
                 }
             }
             catch (SocketTimeoutException e) {
@@ -134,6 +161,23 @@ class DcsBiosUdpReceiverThread extends Thread {
         if (running && dcsAddress != null && socket != null && command != null) {
             DatagramPacket sendPacket = new DatagramPacket(command, command.length, dcsAddress, dcsPort);
             socket.send(sendPacket);
+        }
+    }
+
+    /**
+     * Helper method which notifies all packet listeners.
+     */
+    private void notifyStreamListeners(byte[] data, int offset, int length) {
+        Set<DcsBiosStreamListener> s;
+        synchronized (this) {
+            s = new LinkedHashSet<>(streamListeners);
+        }
+        for(DcsBiosStreamListener listener : s) {
+            try {
+                listener.dcsBiosStreamDataReceived(data, offset, length);
+            } catch (Exception ex) {
+                LOGGER.log(Level.WARNING, String.format("Exception thrown from DCS-BIOS packet handler %s.", listener.getClass().getName()), ex);
+            }
         }
     }
 }

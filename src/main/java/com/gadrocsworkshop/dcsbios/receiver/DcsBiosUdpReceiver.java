@@ -107,4 +107,14 @@ public class DcsBiosUdpReceiver implements DcsBiosReceiver {
     public void removeSyncListener(DcsBiosSyncListener listener) {
         parser.removeSyncListener(listener);
     }
+
+    @Override
+    public void addStreamListener(DcsBiosStreamListener listener) {
+        thread.addStreamListener(listener);
+    }
+
+    @Override
+    public void removeStreamListener(DcsBiosStreamListener listener) {
+        thread.removeStreamListener(listener);
+    }
 }
