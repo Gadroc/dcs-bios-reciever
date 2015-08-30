@@ -19,12 +19,13 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
     private static final Logger LOGGER = Logger.getLogger(DcsBiosArduinoController.class.getName());
 
     private static final byte COMMAND_REQUEST_STATUS = (byte)'s';
-    private static final byte COMMAND_EXPORTSTREAM_DATA = (byte)'e';
+    private static final byte COMMAND_LOAD_EXPORT_DATA = (byte)'e';
 
     private static final byte CONTROLLER_READY_FOR_DATA = (byte)'r';
+    private static final byte CONTROLLER_BUFFER_FULL = (byte)'t';
+    private static final byte CONTROLLER_DATA_RECEIVED = (byte)'v';
     private static final byte CONTROLLER_ERROR_LOADING = (byte)'x';
-    private static final byte CONTROLLER_TRANSMITTING_PACKET = (byte)'t';
-    private static final byte CONTROLLER_PACKET_RECEIVED = (byte)'m';
+    private static final byte CONTROLLER_MESSAGE_RECEIVED = (byte)'m';
 
     private enum CONTROLLER_STATE {
         WAITING,
@@ -37,8 +38,11 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
 
     private String serialPortName;
     private SerialPort serialPort;
+
+    private boolean statusRequestPending;
     private boolean controllerReadyForData;
     private CONTROLLER_STATE state;
+
     private int messageSize;
     private int messagePointer;
     private byte[] messageBuffer = new byte[64];
@@ -56,10 +60,9 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
         return serialPortName;
     }
 
-    public void setSerialPortName(String serialPortName) {
+    public synchronized void setSerialPortName(String serialPortName) {
         this.serialPortName = serialPortName;
         try {
-            setControllerReadyForData(false);
             if (serialPort != null && serialPort.isOpened()) {
                 serialPort.removeEventListener();
                 serialPort.closePort();
@@ -71,7 +74,7 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
         }
     }
 
-    private SerialPort getSerialPort() {
+    private synchronized SerialPort getSerialPort() {
         return serialPort;
     }
 
@@ -81,34 +84,46 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
         serialPort.openPort();
         serialPort.setParams(250000, 8, 1, 0);
         serialPort.addEventListener(this);
+        statusRequestPending = false;
+        setControllerReadyForData(false);
+        requestControllerStatus();
     }
 
-    private void requestControllerStatus() {
+    private synchronized void requestControllerStatus() {
         try {
-            serialPort.writeByte(COMMAND_REQUEST_STATUS);
+            if (statusRequestPending == false) {
+                serialPort.writeByte(COMMAND_REQUEST_STATUS);
+                LOGGER.finer("Requesting controller status.");
+                statusRequestPending = true;
+            }
         } catch (SerialPortException e) {
             LOGGER.log(Level.WARNING, "Error requested controller status.", e);
         }
     }
 
-    private boolean isControllerReadyForData() {
+    private synchronized boolean isControllerReadyForData() {
         return controllerReadyForData;
     }
 
-    private void setControllerReadyForData(boolean value) {
+    private synchronized void setControllerReadyForData(boolean value) {
         controllerReadyForData = value;
+        sendBusExportStreamData();
     }
 
     private void sendBusExportStreamData() {
         try {
             SerialPort port = getSerialPort();
-            if (buffer.size() > 0) {
-                int size = buffer.size() > 255 ? 255 : buffer.size();
-                port.writeByte(COMMAND_EXPORTSTREAM_DATA);
+            if (isControllerReadyForData() && buffer.size() > 0) {
+                int size = buffer.size() > 64 ? 64 : buffer.size();
+                port.writeByte(COMMAND_LOAD_EXPORT_DATA);
                 port.writeByte((byte) size);
+                int checksum = size;
                 for(int i=0;i<size;i++) {
-                    port.writeByte(buffer.get());
+                    byte d = buffer.get();
+                    checksum += d;
+                    port.writeByte(d);
                 }
+                port.writeByte((byte)checksum);
                 setControllerReadyForData(false);
                 LOGGER.finest(String.format("Sent %d bytes with %d remaining.", size, buffer.size()));
             }
@@ -119,26 +134,30 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
 
     @Override
     public synchronized void  dcsBiosStreamDataReceived(byte[] data, int offset, int length) {
-        buffer.add(data, offset, length);
-        if (isControllerReadyForData()) {
+        if (serialPort != null && serialPort.isOpened()) {
+            buffer.add(data, offset, length);
             sendBusExportStreamData();
-        } else if (serialPort != null && serialPort.isOpened()) {
-            requestControllerStatus();
         }
     }
 
     private void processControllerNotification(byte data) {
         if (data == CONTROLLER_READY_FOR_DATA) {
+            LOGGER.finer("Controller buffer ready.");
+            statusRequestPending = false;
             setControllerReadyForData(true);
-            sendBusExportStreamData();
-        } else if (data == CONTROLLER_TRANSMITTING_PACKET) {
+        } else if (data == CONTROLLER_BUFFER_FULL) {
+            LOGGER.finer("Controller buffer full.");
+            statusRequestPending = false;
             setControllerReadyForData(false);
-        } else if (data == CONTROLLER_PACKET_RECEIVED) {
-            messagePointer = 0;
-            state = CONTROLLER_STATE.MESSAGE_SIZE;
+        } else if (data == CONTROLLER_DATA_RECEIVED) {
+            LOGGER.finer("Controller buffer data received.");
+            // TODO Increment pointer.
         } else if (data == CONTROLLER_ERROR_LOADING) {
             LOGGER.warning("Error loading data to bus controller.");
-            setControllerReadyForData(true);
+            // TODO Rewind and retransmit.
+        } else if (data == CONTROLLER_MESSAGE_RECEIVED) {
+            messagePointer = 0;
+            state = CONTROLLER_STATE.MESSAGE_SIZE;
         } else {
             LOGGER.warning(String.format("Unexpected data(%d) from bus controller.", data));
         }
