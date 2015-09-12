@@ -11,13 +11,10 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 
-/**
- * Created by Craig Courtney on 8/26/2015.
- */
-public class DcsBiosRelay implements SerialPortEventListener {
+public class DcsBiosSerial implements SerialPortEventListener {
 
     public static void main(String[] args) {
-        DcsBiosRelay relay = new DcsBiosRelay();
+        DcsBiosSerial relay = new DcsBiosSerial(args[0]);
         relay.run();
     }
 
@@ -28,9 +25,9 @@ public class DcsBiosRelay implements SerialPortEventListener {
     private int sendBufferPointer = 0;
     private InetAddress dcsAddress = null;
 
-    public DcsBiosRelay() {
+    public DcsBiosSerial(String portName) {
         try {
-            serialPort = new SerialPort("COM9");
+            serialPort = new SerialPort(portName);
             serialPort.openPort();
             serialPort.setParams(250000, 8, 1, 0);
             serialPort.addEventListener(this);
