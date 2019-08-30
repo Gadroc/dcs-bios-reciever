@@ -1,43 +1,15 @@
-apply plugin: 'idea'
-apply plugin: 'java'
-apply plugin: 'jacoco'
-apply plugin: 'maven-publish'
+plugins {
+    id 'java-library'
+}
 
-sourceCompatibility = 1.8
-version = '1.2.4-SNAPSHOT'
+version = '1.2.5-SNAPSHOT'
 group = 'com.gadrocsworkshop'
 
 repositories {
     mavenCentral()
 }
 
-idea {
-    project {
-        jdkName = '1.8'
-        languageLevel = '1.8'
-    }
-}
-
-task sourceJar(type: Jar) {
-    from sourceSets.main.allSource
-}
-
 dependencies {
-    compile group: 'org.scream3r', name: 'jssc', version: '2.8.0'
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-}
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '2.5'
-}
-
-publishing {
-    publications {
-        source(MavenPublication) {
-            from components.java
-            artifact sourceJar {
-                classifier "sources"
-            }
-        }
-    }
+    implementation 'com.fazecast:jSerialComm:[2.0.0,3.0.0)'
+    testImplementation 'junit:junit:4.12'
 }

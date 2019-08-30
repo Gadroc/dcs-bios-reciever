@@ -1,9 +1,8 @@
 package com.gadrocsworkshop.dcsbios.arduino;
 
-import jssc.SerialPort;
-import jssc.SerialPortEvent;
-import jssc.SerialPortEventListener;
-import jssc.SerialPortException;
+import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPortEvent;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -11,7 +10,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 
-public class DcsBiosSerial implements SerialPortEventListener {
+public class DcsBiosSerial {
 
     public static void main(String[] args) {
         DcsBiosSerial relay = new DcsBiosSerial(args[0]);
@@ -25,12 +24,41 @@ public class DcsBiosSerial implements SerialPortEventListener {
     private int sendBufferPointer = 0;
     private InetAddress dcsAddress = null;
 
+    private SerialPortDataListener listener = new SerialPortDataListener() {
+        @Override
+        public int getListeningEvents() { return SerialPort.LISTENING_EVENT_DATA_AVAILABLE; }
+
+        @Override
+        public void serialEvent(SerialPortEvent event)
+        {
+            if (event.getEventType() != SerialPort.LISTENING_EVENT_DATA_AVAILABLE)
+                return;
+
+            try {
+                byte[] data = new byte[serialPort.bytesAvailable()];
+                int numRead = serialPort.readBytes(data, data.length);
+                for (byte aData : data) {
+                    sendBuffer[sendBufferPointer++] = aData;
+                    if (aData == 10) {
+                        if (dcsAddress != null) {
+                            DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBufferPointer, dcsAddress, dcsPort);
+                            socket.send(sendPacket);
+                        }
+                        sendBufferPointer = 0;
+                    }
+                }
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+
     public DcsBiosSerial(String portName) {
         try {
-            serialPort = new SerialPort(portName);
+            serialPort = SerialPort.getCommPort(portName);
             serialPort.openPort();
-            serialPort.setParams(250000, 8, 1, 0);
-            serialPort.addEventListener(this);
+            serialPort.setComPortParameters(250000, 8, 1, 0);
+            serialPort.addDataListener(listener);
 
             InetAddress group = InetAddress.getByName("239.255.50.10");
             socket = new MulticastSocket(5010);
@@ -49,34 +77,10 @@ public class DcsBiosSerial implements SerialPortEventListener {
                 socket.receive(packet);
                 dcsAddress = packet.getAddress();
                 int size = packet.getLength();
-                for(int i=0;i<size;i++) {
-                    serialPort.writeByte(buf[packet.getOffset()+i]);
-                }
+                serialPort.writeBytes(buf, size, packet.getOffset());
             }
         } catch (Exception ex) {
             ex.printStackTrace();
-        }
-    }
-
-    @Override
-    public void serialEvent(SerialPortEvent serialPortEvent) {
-        if (serialPortEvent.isRXCHAR()) {
-            try {
-                int count = serialPortEvent.getEventValue();
-                byte[] data = serialPort.readBytes(count);
-                for (byte aData : data) {
-                    sendBuffer[sendBufferPointer++] = aData;
-                    if (aData == 10) {
-                        if (dcsAddress != null) {
-                            DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBufferPointer, dcsAddress, dcsPort);
-                            socket.send(sendPacket);
-                        }
-                        sendBufferPointer = 0;
-                    }
-                }
-            } catch (SerialPortException | IOException ex) {
-                ex.printStackTrace();
-            }
         }
     }
 }

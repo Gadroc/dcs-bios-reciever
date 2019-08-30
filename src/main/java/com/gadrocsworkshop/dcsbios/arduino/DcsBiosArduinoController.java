@@ -1,11 +1,11 @@
 package com.gadrocsworkshop.dcsbios.arduino;
 
+import com.fazecast.jSerialComm.SerialPort;
+
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPortEvent;
 import com.gadrocsworkshop.dcsbios.receiver.DcsBiosReceiver;
 import com.gadrocsworkshop.dcsbios.receiver.DcsBiosStreamListener;
-import jssc.SerialPort;
-import jssc.SerialPortEvent;
-import jssc.SerialPortEventListener;
-import jssc.SerialPortException;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 /**
  * Controller which speaks with a controller using the DcsBiosArduino library.
  */
-public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPortEventListener {
+public class DcsBiosArduinoController implements DcsBiosStreamListener {
 
     private static final Logger LOGGER = Logger.getLogger(DcsBiosArduinoController.class.getName());
 
@@ -38,6 +38,7 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
 
     private String serialPortName;
     private SerialPort serialPort;
+    private byte[] writeBuffer = new byte[67];
 
     private boolean statusRequestPending;
     private boolean controllerReadyForData;
@@ -46,6 +47,41 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
     private int messageSize;
     private int messagePointer;
     private final byte[] messageBuffer = new byte[64];
+
+    private SerialPortDataListener listener = new SerialPortDataListener() {
+        @Override
+        public int getListeningEvents() { return SerialPort.LISTENING_EVENT_DATA_AVAILABLE; }
+
+        @Override
+        public void serialEvent(SerialPortEvent event) {
+            byte[] data = new byte[serialPort.bytesAvailable()];
+            int numRead = serialPort.readBytes(data, data.length);
+            for (byte datum : data) {
+                switch (state) {
+                    case WAITING:
+                        processControllerNotification(datum);
+                        break;
+                    case MESSAGE_SIZE:
+                        messageSize = datum;
+                        state = CONTROLLER_STATE.MESSAGE_DATA;
+                        break;
+                    case MESSAGE_DATA:
+                        messageBuffer[messagePointer++] = datum;
+                        if (messagePointer == messageSize) {
+                            try {
+                                String message = new String(messageBuffer, 0, messageSize);
+                                receiver.sendCommand(message);
+                                LOGGER.finer(new String(messageBuffer, 0, messageSize));
+                            } catch (IOException e) {
+                                LOGGER.log(Level.WARNING, "Error sending command to DCS-BIOS.", e);
+                            }
+                            state = CONTROLLER_STATE.WAITING;
+                        }
+                        break;
+                }
+            }
+        }
+    };
 
     public DcsBiosArduinoController(DcsBiosReceiver receiver, String serialPortName) {
         this.buffer = new ByteRingBuffer(4096);
@@ -63,38 +99,31 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
     @SuppressWarnings("WeakerAccess")
     public synchronized void setSerialPortName(String serialPortName) {
         this.serialPortName = serialPortName;
-        try {
-            if (serialPort != null && serialPort.isOpened()) {
-                serialPort.removeEventListener();
-                serialPort.closePort();
-                serialPort = null;
-            }
-            initSerialPort();
-        } catch (SerialPortException ex) {
-            LOGGER.log(Level.WARNING, "Error changing serial port.", ex);
+        if (serialPort != null && serialPort.isOpen()) {
+            serialPort.removeDataListener();
+            serialPort.closePort();
+            serialPort = null;
         }
+        initSerialPort();
     }
 
-    private void initSerialPort() throws SerialPortException {
+    private void initSerialPort() {
         LOGGER.info(String.format("Opening serial port '%s'", serialPortName));
-        serialPort = new SerialPort(serialPortName);
+        serialPort = SerialPort.getCommPort(serialPortName);
         serialPort.openPort();
-        serialPort.setParams(250000, 8, 1, 0);
-        serialPort.addEventListener(this);
+        serialPort.setComPortParameters(250000, 8, 1, 0);
+        serialPort.addDataListener(listener);
         statusRequestPending = false;
         setControllerReadyForData(false);
         requestControllerStatus();
     }
 
     private synchronized void requestControllerStatus() {
-        try {
-            if (!statusRequestPending) {
-                serialPort.writeByte(COMMAND_REQUEST_STATUS);
-                LOGGER.finer("Requesting controller status.");
-                statusRequestPending = true;
-            }
-        } catch (SerialPortException e) {
-            LOGGER.log(Level.WARNING, "Error requested controller status.", e);
+        if (!statusRequestPending) {
+            writeBuffer[0] = COMMAND_REQUEST_STATUS;
+            serialPort.writeBytes(writeBuffer, 1);
+            LOGGER.finer("Requesting controller status.");
+            statusRequestPending = true;
         }
     }
 
@@ -107,30 +136,30 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
         sendBusExportStreamData();
     }
 
+    /**
+     * Note: Must be called from a synchronized method as it uses a class instance level write buffer.
+     */
     private void sendBusExportStreamData() {
-        try {
-            if (isControllerReadyForData() && buffer.size() > 0) {
-                int size = buffer.size() > 64 ? 64 : buffer.size();
-                serialPort.writeByte(COMMAND_LOAD_EXPORT_DATA);
-                serialPort.writeByte((byte) size);
-                int checksum = size;
-                for(int i=0;i<size;i++) {
-                    byte d = buffer.get();
-                    checksum += d;
-                    serialPort.writeByte(d);
-                }
-                serialPort.writeByte((byte)checksum);
-                setControllerReadyForData(false);
-                LOGGER.finest(String.format("Sent %d bytes with %d remaining.", size, buffer.size()));
+        if (isControllerReadyForData() && buffer.size() > 0) {
+            int size = Math.min(buffer.size(), 64);
+            writeBuffer[0] = COMMAND_LOAD_EXPORT_DATA;
+            writeBuffer[1] = (byte)size;
+            int checksum = size;
+            for(int i=0;i<size;i++) {
+                byte d = buffer.get();
+                checksum += d;
+                writeBuffer[2+i] = d;
             }
-        } catch (SerialPortException ex) {
-            LOGGER.log(Level.SEVERE, "Error sending data to bus controller.", ex);
+            writeBuffer[size+3] = (byte)checksum;
+            serialPort.writeBytes(writeBuffer, size+3);
+            setControllerReadyForData(false);
+            LOGGER.finest(String.format("Sent %d bytes with %d remaining.", size, buffer.size()));
         }
     }
 
     @Override
     public synchronized void  dcsBiosStreamDataReceived(byte[] data, int offset, int length) {
-        if (serialPort != null && serialPort.isOpened()) {
+        if (serialPort != null && serialPort.isOpen()) {
             buffer.add(data, offset, length);
             sendBusExportStreamData();
         }
@@ -156,42 +185,6 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener, SerialPo
             state = CONTROLLER_STATE.MESSAGE_SIZE;
         } else {
             LOGGER.warning(String.format("Unexpected data(%d) from bus controller.", data));
-        }
-    }
-
-    @Override
-    public synchronized void serialEvent(SerialPortEvent serialPortEvent) {
-        if (serialPortEvent.isRXCHAR()) {
-            try {
-                int count = serialPortEvent.getEventValue();
-                byte[] data = serialPort.readBytes(count);
-                for (int i = 0; i < count; i++) {
-                    switch (state) {
-                        case WAITING:
-                            processControllerNotification(data[i]);
-                            break;
-                        case MESSAGE_SIZE:
-                            messageSize = data[i];
-                            state = CONTROLLER_STATE.MESSAGE_DATA;
-                            break;
-                        case MESSAGE_DATA:
-                            messageBuffer[messagePointer++] = data[i];
-                            if (messagePointer == messageSize) {
-                                try {
-                                    String message = new String(messageBuffer, 0, messageSize);
-                                    receiver.sendCommand(message);
-                                    LOGGER.finer(new String(messageBuffer, 0, messageSize));
-                                } catch (IOException e) {
-                                    LOGGER.log(Level.WARNING, "Error sending command to DCS-BIOS.", e);
-                                }
-                                state = CONTROLLER_STATE.WAITING;
-                            }
-                            break;
-                    }
-                }
-            } catch (SerialPortException ex) {
-                LOGGER.log(Level.WARNING, "Error reading from bus controller.", ex);
-            }
         }
     }
 }
