@@ -150,7 +150,7 @@ public class DcsBiosArduinoController implements DcsBiosStreamListener {
                 checksum += d;
                 writeBuffer[2+i] = d;
             }
-            writeBuffer[size+3] = (byte)checksum;
+            writeBuffer[size+2] = (byte)checksum;
             serialPort.writeBytes(writeBuffer, size+3);
             setControllerReadyForData(false);
             LOGGER.finest(String.format("Sent %d bytes with %d remaining.", size, buffer.size()));
